@@ -2,6 +2,7 @@
 
 import argparse
 import itertools
+import os
 
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
@@ -32,6 +33,10 @@ parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads 
 parser.add_argument('--resume', action='store_true', help='Continue training')
 opt = parser.parse_args()
 print(opt)
+
+#Saving command line arguments for resume
+# with open('output/commandline_args.txt', 'w') as f:
+#     f.write('\n'.join(os.sys.argv[1:]))
 
 if torch.cuda.is_available() and not opt.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
@@ -92,7 +97,9 @@ dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unal
 logger = Logger(opt.n_epochs, len(dataloader))
 ###################################
 
-print(lr_scheduler_G.state_dict)
+state=dict()
+#if opt.resume:
+
 
 ###### Training ######
 for epoch in range(opt.epoch, opt.n_epochs):
@@ -184,16 +191,31 @@ for epoch in range(opt.epoch, opt.n_epochs):
     lr_scheduler_D_B.step()
 
     # Save models checkpoint
-    torch.save(epoch,'output/epoch.pth')
-    torch.save(netG_A2B.state_dict(), 'output/netG_A2B.pth')
-    torch.save(netG_B2A.state_dict(), 'output/netG_B2A.pth')
-    torch.save(netD_A.state_dict(), 'output/netD_A.pth')
-    torch.save(netD_B.state_dict(), 'output/netD_B.pth')
-    torch.save(netG_A2B.state_dict(), 'output/netG_A2B.pth')
-    torch.save(optimizer_G.state_dict(), 'output/optimizer_G.pth')
-    torch.save(optimizer_D_A.state_dict(), 'output/optimizer_D_A.pth')
-    torch.save(optimizer_D_B.state_dict(), 'output/optimizer_D_B.pth')
-    torch.save(lr_scheduler_G.state_dict(), 'output/lr_scheduler_G.pth')
-    torch.save(lr_scheduler_D_A.state_dict(), 'output/lr_scheduler_D_A.pth')
-    torch.save(lr_scheduler_D_B.state_dict(), 'output/lr_scheduler_D_B.pth')
+    state['epoch']=epoch+1
+    state['epoch']=epoch
+    state['netG_A2B']=netG_A2B.state_dict()
+    state['netG_B2A']=netG_B2A.state_dict()
+    state['netD_A']=netD_A.state_dict()
+    state['netD_B']=netD_B.state_dict()
+    state['optimizer_G']=optimizer_G.state_dict()
+    state['optimizer_D_A']=optimizer_D_A.state_dict()
+    state['optimizer_D_B']=optimizer_D_B.state_dict()
+    state['lr_scheduler_G']=lr_scheduler_G.state_dict()
+    state['lr_scheduler_D_A']=lr_scheduler_D_A.state_dict()
+    state['lr_scheduler_D_B']=lr_scheduler_D_B.state_dict()
+    state.update({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
+                'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)})
+
+    torch.save(state,'output/checkpoint_'+epoch+'.pth')
+    # torch.save(epoch,'output/epoch.pth')
+    # torch.save(netG_A2B.state_dict(), 'output/netG_A2B.pth')
+    # torch.save(netG_B2A.state_dict(), 'output/netG_B2A.pth')
+    # torch.save(netD_A.state_dict(), 'output/netD_A.pth')
+    # torch.save(netD_B.state_dict(), 'output/netD_B.pth')
+    # torch.save(optimizer_G.state_dict(), 'output/optimizer_G.pth')
+    # torch.save(optimizer_D_A.state_dict(), 'output/optimizer_D_A.pth')
+    # torch.save(optimizer_D_B.state_dict(), 'output/optimizer_D_B.pth')
+    # torch.save(lr_scheduler_G.state_dict(), 'output/lr_scheduler_G.pth')
+    # torch.save(lr_scheduler_D_A.state_dict(), 'output/lr_scheduler_D_A.pth')
+    # torch.save(lr_scheduler_D_B.state_dict(), 'output/lr_scheduler_D_B.pth')
 ###################################
