@@ -29,6 +29,7 @@ parser.add_argument('--input_nc', type=int, default=3, help='number of channels 
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda', action='store_true', help='use GPU computation')
 parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
+parser.add_argument('--resume', action='store_true', help='Continue training')
 opt = parser.parse_args()
 print(opt)
 
@@ -79,17 +80,19 @@ fake_A_buffer = ReplayBuffer()
 fake_B_buffer = ReplayBuffer()
 
 # Dataset loader
-transforms_ = [ transforms.Resize(int(opt.size*1.12), Image.BICUBIC), 
-                transforms.RandomCrop(opt.size), 
+transforms_ = [ transforms.Resize(int(opt.size*1.12), Image.BICUBIC),
+                transforms.RandomCrop(opt.size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
-dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True), 
+dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True),
                         batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
 
 # Loss plot
 logger = Logger(opt.n_epochs, len(dataloader))
 ###################################
+
+print(lr_scheduler_G.state_dict)
 
 ###### Training ######
 for epoch in range(opt.epoch, opt.n_epochs):
@@ -128,7 +131,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         # Total loss
         loss_G = loss_identity_A + loss_identity_B + loss_GAN_A2B + loss_GAN_B2A + loss_cycle_ABA + loss_cycle_BAB
         loss_G.backward()
-        
+
         optimizer_G.step()
         ###################################
 
@@ -157,7 +160,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         # Real loss
         pred_real = netD_B(real_B)
         loss_D_real = criterion_GAN(pred_real, target_real)
-        
+
         # Fake loss
         fake_B = fake_B_buffer.push_and_pop(fake_B)
         pred_fake = netD_B(fake_B.detach())
@@ -172,7 +175,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
 
         # Progress report (http://localhost:8097)
         logger.log({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
-                    'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)}, 
+                    'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)},
                     images={'real_A': real_A, 'real_B': real_B, 'fake_A': fake_A, 'fake_B': fake_B})
 
     # Update learning rates
@@ -180,9 +183,17 @@ for epoch in range(opt.epoch, opt.n_epochs):
     lr_scheduler_D_A.step()
     lr_scheduler_D_B.step()
 
-    # Save models checkpoints
+    # Save models checkpoint
+    torch.save(epoch,'output/epoch.pth')
     torch.save(netG_A2B.state_dict(), 'output/netG_A2B.pth')
     torch.save(netG_B2A.state_dict(), 'output/netG_B2A.pth')
     torch.save(netD_A.state_dict(), 'output/netD_A.pth')
     torch.save(netD_B.state_dict(), 'output/netD_B.pth')
+    torch.save(netG_A2B.state_dict(), 'output/netG_A2B.pth')
+    torch.save(optimizer_G.state_dict(), 'output/optimizer_G.pth')
+    torch.save(optimizer_D_A.state_dict(), 'output/optimizer_D_A.pth')
+    torch.save(optimizer_D_B.state_dict(), 'output/optimizer_D_B.pth')
+    torch.save(lr_scheduler_G.state_dict(), 'output/lr_scheduler_G.pth')
+    torch.save(lr_scheduler_D_A.state_dict(), 'output/lr_scheduler_D_A.pth')
+    torch.save(lr_scheduler_D_B.state_dict(), 'output/lr_scheduler_D_B.pth')
 ###################################
