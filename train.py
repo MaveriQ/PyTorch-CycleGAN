@@ -70,9 +70,10 @@ optimizer_G = torch.optim.Adam(itertools.chain(netG_A2B.parameters(), netG_B2A.p
 optimizer_D_A = torch.optim.Adam(netD_A.parameters(), lr=opt.lr, betas=(0.5, 0.999))
 optimizer_D_B = torch.optim.Adam(netD_B.parameters(), lr=opt.lr, betas=(0.5, 0.999))
 
-lr_scheduler_G = torch.optim.lr_scheduler.LambdaLR(optimizer_G, lr_lambda=LambdaLR(opt.n_epochs, opt.epoch, opt.decay_epoch).step)
-lr_scheduler_D_A = torch.optim.lr_scheduler.LambdaLR(optimizer_D_A, lr_lambda=LambdaLR(opt.n_epochs, opt.epoch, opt.decay_epoch).step)
-lr_scheduler_D_B = torch.optim.lr_scheduler.LambdaLR(optimizer_D_B, lr_lambda=LambdaLR(opt.n_epochs, opt.epoch, opt.decay_epoch).step)
+lambda_LR=LambdaLR(opt.n_epochs, opt.epoch, opt.decay_epoch)
+lr_scheduler_G = torch.optim.lr_scheduler.LambdaLR(optimizer_G, lr_lambda=lambda_LR.step)
+lr_scheduler_D_A = torch.optim.lr_scheduler.LambdaLR(optimizer_D_A, lr_lambda=lambda_LR.step)
+lr_scheduler_D_B = torch.optim.lr_scheduler.LambdaLR(optimizer_D_B, lr_lambda=lambda_LR.step)
 
 # Inputs & targets memory allocation
 Tensor = torch.cuda.FloatTensor if opt.cuda else torch.Tensor
@@ -200,13 +201,11 @@ for epoch in range(opt.epoch, opt.n_epochs):
     state['optimizer_G']=optimizer_G.state_dict()
     state['optimizer_D_A']=optimizer_D_A.state_dict()
     state['optimizer_D_B']=optimizer_D_B.state_dict()
-    state['lr_scheduler_G']=lr_scheduler_G.state_dict()
-    state['lr_scheduler_D_A']=lr_scheduler_D_A.state_dict()
-    state['lr_scheduler_D_B']=lr_scheduler_D_B.state_dict()
+    state['lambda_LR']=lambda_LR.state_dict()
     state.update({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
                 'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)})
 
-    torch.save(state,'output/checkpoint_'+epoch+'.pth')
+    torch.save(state,'output/checkpoint_'+str(epoch)+'.pth')
     # torch.save(epoch,'output/epoch.pth')
     # torch.save(netG_A2B.state_dict(), 'output/netG_A2B.pth')
     # torch.save(netG_B2A.state_dict(), 'output/netG_B2A.pth')
@@ -219,3 +218,4 @@ for epoch in range(opt.epoch, opt.n_epochs):
     # torch.save(lr_scheduler_D_A.state_dict(), 'output/lr_scheduler_D_A.pth')
     # torch.save(lr_scheduler_D_B.state_dict(), 'output/lr_scheduler_D_B.pth')
 ###################################
+
